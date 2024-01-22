@@ -1,5 +1,5 @@
 {
-  description = "Build environment for kseq_split.";
+  description = "Flake package for kseq_split.";
 
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs/nixpkgs-unstable;
@@ -23,17 +23,7 @@
               buildInputs = [ zlib ];
             };
         in
-          with pkgs;
           {
-            devShells.default = mkShell {
-              # tools required to build it
-              nativeBuildInputs = [
-                # temporary investigation
-                gnumake
-                gcc
-                zlib
-              ];
-            };
             packages.default = kseq_split;
           }
       );
