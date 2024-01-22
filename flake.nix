@@ -13,9 +13,15 @@
           pkgs = import nixpkgs {
             inherit system;
           };
-          #nu_plugin_bash_env = pkgs.writeShellScriptBin "nu_plugin_bash_env"
-          #  (builtins.replaceStrings ["jq"] ["${pkgs.jq}/bin/jq"]
-          #    (builtins.readFile ./nu_plugin_bash_env));
+          kseq_split =
+            with pkgs;
+            stdenv.mkDerivation {
+              name = "kseq_split";
+              src = self;
+              buildPhase = "make";
+              installPhase = "mkdir -p $out/bin; install -t $out/bin build/kseq_count build/kseq_split build/kseq_test";
+              buildInputs = [ zlib ];
+            };
         in
           with pkgs;
           {
@@ -28,7 +34,7 @@
                 zlib
               ];
             };
-            #packages.default = nu_plugin_bash_env;
+            packages.default = kseq_split;
           }
       );
 }
