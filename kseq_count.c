@@ -256,7 +256,7 @@ int get_compression_type(char *filename) {
 	fclose(instream);
 
 	if(DEBUG) {
-		printf("buf length=%d\nsize=%d\nnum read=%d\n%02x\n%02x\n%02x\n\n\n", BUF_SIZE, sizeof(fingerprint_buffer[0]), num_read,
+		printf("buf length=%d\nsize=%ld\nnum read=%d\n%02x\n%02x\n%02x\n\n\n", BUF_SIZE, sizeof(fingerprint_buffer[0]), num_read,
                       (unsigned int) fingerprint_buffer[0], (unsigned int) fingerprint_buffer[1], (unsigned int) fingerprint_buffer[2] );
 	}
 
