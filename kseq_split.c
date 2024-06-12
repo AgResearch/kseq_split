@@ -2,35 +2,35 @@
 * This software is based on Heng Li's kseq parser
 * http://lh3lh3.users.sourceforge.net/kseq.shtml
 * AMcC
-* 
-* kseq parser Contact: Heng Li <lh3@sanger.ac.uk> 
-* 
+*
+* kseq parser Contact: Heng Li <lh3@sanger.ac.uk>
+*
 * The MIT License included with kseq is reproduced below
-*/  
-/* The MIT License 
- 
-   Copyright (c) 2008 Genome Research Ltd (GRL). 
- 
-   Permission is hereby granted, free of charge, to any person obtaining 
-   a copy of this software and associated documentation files (the 
-   "Software"), to deal in the Software without restriction, including 
-   without limitation the rights to use, copy, modify, merge, publish, 
-   distribute, sublicense, and/or sell copies of the Software, and to 
-   permit persons to whom the Software is furnished to do so, subject to 
-   the following conditions: 
- 
-   The above copyright notice and this permission notice shall be 
-   included in all copies or substantial portions of the Software. 
- 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
-   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
-   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-   SOFTWARE. 
-*/  
+*/
+/* The MIT License
+
+   Copyright (c) 2008 Genome Research Ltd (GRL).
+
+   Permission is hereby granted, free of charge, to any person obtaining
+   a copy of this software and associated documentation files (the
+   "Software"), to deal in the Software without restriction, including
+   without limitation the rights to use, copy, modify, merge, publish,
+   distribute, sublicense, and/or sell copies of the Software, and to
+   permit persons to whom the Software is furnished to do so, subject to
+   the following conditions:
+
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+*/
 #include <zlib.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -42,43 +42,43 @@ KSEQ_INIT(gzFile, gzread)
 
 
 /*
-* This program splits a fastq or fasta file into chunks (for example for 
-* submission to a compute cluster), optionally subsampling the file. Input 
-* files may be compressed or uncompressed.  It is compatible for use with a 
-* client that submits each chunk to processing as it becomes available, with 
-* an "interim" filename used to write data, and then this is renamed to the actual target 
+* This program splits a fastq or fasta file into chunks (for example for
+* submission to a compute cluster), optionally subsampling the file. Input
+* files may be compressed or uncompressed.  It is compatible for use with a
+* client that submits each chunk to processing as it becomes available, with
+* an "interim" filename used to write data, and then this is renamed to the actual target
 * chunkname only when complete. Thus a client can poll for chunk files,
 * with a guarantee that any found are completed.
-* 
-* 
+*
+*
 */
 #define MAX_CHUNK_NUMBER_LENGTH 30
 
 
 /*
 * Next two methods : given the current chunk number, close the current in-progress chunk file (if any),
-* rename it according to the template to be used for the final chunks,  and 
-* open a new "in-progress" chunk file, returning the new file pointer. 
-* Chunk file names are made using a template. "In progress" chunk file names are made by 
+* rename it according to the template to be used for the final chunks,  and
+* open a new "in-progress" chunk file, returning the new file pointer.
+* Chunk file names are made using a template. "In progress" chunk file names are made by
 * appending the final name with an underscore.
 * For example a template SQ0352_S1_L001_R1_001.%05d.fastq.
 *
-* will yield SQ0352_S1_L001_R1_001.00001.fastq, SQ0352_S1_L001_R1_001.00002.fastq etc 
+* will yield SQ0352_S1_L001_R1_001.00001.fastq, SQ0352_S1_L001_R1_001.00002.fastq etc
 * (with "in-progress" names SQ0352_S1_L001_R1_001.00001.fastq_, SQ0352_S1_L001_R2_001.00001.fastq_ etc )
-* etc 
+* etc
 */
-void finalise_chunk( FILE *current_fp, char *chunk_name_buffer) { 
+void finalise_chunk( FILE *current_fp, char *chunk_name_buffer) {
 	char *final_name_buffer;
 	final_name_buffer = (char *) malloc(strlen(chunk_name_buffer));
         final_name_buffer = strncpy(final_name_buffer, chunk_name_buffer, strlen(chunk_name_buffer)-1);
-	final_name_buffer[strlen(chunk_name_buffer)-1] = '\0'; 
-      
-	fclose( current_fp );	
+	final_name_buffer[strlen(chunk_name_buffer)-1] = '\0';
+
+	fclose( current_fp );
 	rename(chunk_name_buffer, final_name_buffer);
 	free(final_name_buffer);
 	return;
 }
-FILE *advance_chunk( char *filename_template, int current_chunk_number, FILE *current_fp, char *chunk_name_buffer) {       
+FILE *advance_chunk( char *filename_template, int current_chunk_number, FILE *current_fp, char *chunk_name_buffer) {
 	FILE *next_fp;
 
 	if ( current_chunk_number > 0 ) {
@@ -88,28 +88,28 @@ FILE *advance_chunk( char *filename_template, int current_chunk_number, FILE *cu
 	// construct name of next in-progress chunk file - i.e. chunk file name appended with _
         sprintf((char *) chunk_name_buffer, filename_template, 1+current_chunk_number);
 	chunk_name_buffer = strcat(chunk_name_buffer,"_");
-	next_fp = fopen(chunk_name_buffer, "w");	
+	next_fp = fopen(chunk_name_buffer, "w");
         return next_fp;
 }
 
 
-/* 
-* write back out a kseq_t record to a fastq file. Example kseq_t record : 
+/*
+* write back out a kseq_t record to a fastq file. Example kseq_t record :
 * name: ST-E00118:256:H52J5ALXX:3:1101:2270:1309
 * comment: 1:N:0:0
 * seq: NGAGTTTGCTCAAATTCATGTCCATTGAGTCGGTGATGCTAGACAGTCTGAATACATGCTAGTTGGTGATGAGGCAAATAGCCTTAGCATTTCTCAGATGAAGAGTTCAAGATTCAGCACACTTGAATGGCTTTCTCAGAGTAATTCAGT
 * qual: #AA<AFJJJFJJFFJJJJJJJJJJJJJJJJJJJJJFJJJFFJJJFJFFJJFJJJJJJJJFFJJJJFJJJJJJJJJJJFJJJJJJJJJJJJJJJJJJJFJJAFFJJFFJJJJJJFJFJJJJJJJJJJAFFFJ<AJJAJJFJFFJA7FFFFA
-* 
-* source record which we want to round-trip back out: 
+*
+* source record which we want to round-trip back out:
 * @ST-E00118:256:H52J5ALXX:3:1101:2270:1309 1:N:0:0
 * NGAGTTTGCTCAAATTCATGTCCATTGAGTCGGTGATGCTAGACAGTCTGAATACATGCTAGTTGGTGATGAGGCAAATAGCCTTAGCATTTCTCAGATGAAGAGTTCAAGATTCAGCACACTTGAATGGCTTTCTCAGAGTAATTCAGT
 * +
 * #AA<AFJJJFJJFFJJJJJJJJJJJJJJJJJJJJJFJJJFFJJJFJFFJJFJJJJJJJJFFJJJJFJJJJJJJJJJJFJJJJJJJJJJJJJJJJJJJFJJAFFJJFFJJJJJJFJFJJJJJJJJJJAFFFJ<AJJAJJFJFFJA7FFFFA
-* 
+*
 */
 
 typedef struct kseqsplit_opts {
-	char* input_filename;	
+	char* input_filename;
 	int chunksize;
         char *filename_template;
 	char* stats_filename;
@@ -130,7 +130,7 @@ void kseq_split_write( kseq_t *seq, FILE *fp_chunk, t_kseqsplit_opts *kseqsplit_
 		fprintf(fp_chunk, "%s\n", seq->seq.s);
 	}
 	else {
-		// assume fastq		
+		// assume fastq
         	if ( seq->comment.l ) {
 			fprintf(fp_chunk, "@%s %s\n", seq->name.s, seq->comment.s);
                 }
@@ -155,7 +155,7 @@ int get_sample_bool(float sampling_proportion) {
 	else {
 		return 0;
 	}
-}   
+}
 
 
 int get_kseqsplit_opts(int argc, char **argv, t_kseqsplit_opts *kseqsplit_opts)
@@ -168,7 +168,7 @@ int get_kseqsplit_opts(int argc, char **argv, t_kseqsplit_opts *kseqsplit_opts)
 
 	kseqsplit_opts->stats_filename = "";
 	kseqsplit_opts->output_format = "";
-	kseqsplit_opts->sampling_proportion = -1.0 ; 
+	kseqsplit_opts->sampling_proportion = -1.0 ;
 
 
 	opterr = 0;
@@ -217,20 +217,20 @@ int get_kseqsplit_opts(int argc, char **argv, t_kseqsplit_opts *kseqsplit_opts)
    	} // getopt loop
 
 
-  
-	// assign non-option args 
+
+	// assign non-option args
 	if( argc - optind != 3 ) {
 		fprintf(stderr, usage, argv[0]);
 		return 1;
 	}
-	kseqsplit_opts->input_filename = argv[optind];    
+	kseqsplit_opts->input_filename = argv[optind];
 	iresult = sscanf(argv[optind+1],"%d", &(kseqsplit_opts->chunksize));
 	if( iresult != 1) {
 		fprintf(stderr, "Unable to parse chunksize from %s\n", argv[optind+1]);
 		return 1;
 	}
 	if ( kseqsplit_opts->sampling_proportion > 0 ){
-		kseqsplit_opts->chunksize = (int) 0.5 + kseqsplit_opts->sampling_proportion * kseqsplit_opts->chunksize; 
+		kseqsplit_opts->chunksize = (int) 0.5 + kseqsplit_opts->sampling_proportion * kseqsplit_opts->chunksize;
                 if ( kseqsplit_opts->chunksize < 1 ) {
 			kseqsplit_opts->chunksize = 1;
                 }
@@ -240,13 +240,13 @@ int get_kseqsplit_opts(int argc, char **argv, t_kseqsplit_opts *kseqsplit_opts)
 
 	kseqsplit_opts->filename_template = argv[optind+2];
 
-	// do some checks 
+	// do some checks
 	if ( strcmp(kseqsplit_opts->output_format, "fasta") != 0 && strcmp(kseqsplit_opts->output_format , "fastq") != 0  ) {
 		fprintf(stderr, "must specify output format fasta or fastq\n");
-		return 1;		
+		return 1;
 	}
 
-  
+
 	if (validate_only) {
 		printf ("kseq_split options:\n stats_filename = %s\n sampling_proportion = %f\n input_filename=%s\n chunksize=%d\n filename_template=%s output_format=%s\n",\
         	kseqsplit_opts->stats_filename,  kseqsplit_opts->sampling_proportion,\
@@ -262,7 +262,7 @@ int get_kseqsplit_opts(int argc, char **argv, t_kseqsplit_opts *kseqsplit_opts)
 
 int main(int argc, char *argv[])
 {
-	
+
 	gzFile fp;
 	FILE *fp_chunk, *fp_stats;
 	kseq_t *seq;
@@ -277,15 +277,15 @@ int main(int argc, char *argv[])
  	if ( kseqsplit_opts_result != 0 ){
 		// usage message on help is not an error
 		return kseqsplit_opts_result == 2 ? 0 : kseqsplit_opts_result;
- 	} 
-      
+ 	}
+
 	char* chunk_name_buffer;
 
 	// set up buffer for creating chunk filenames
-	chunk_name_buffer = (char *) malloc(MAX_CHUNK_NUMBER_LENGTH + strlen(kseqsplit_opts.filename_template)); 
+	chunk_name_buffer = (char *) malloc(MAX_CHUNK_NUMBER_LENGTH + strlen(kseqsplit_opts.filename_template));
 
 
-	// process the file 
+	// process the file
 	fp = gzopen(kseqsplit_opts.input_filename, "r");
 	seq = kseq_init(fp);
 	while ((l = kseq_read(seq)) >= 0) {
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 			sample_bool = get_sample_bool( kseqsplit_opts.sampling_proportion );
 		}
 
-		if(sample_bool) {		
+		if(sample_bool) {
 			record_count++;
 			if (record_count%kseqsplit_opts.chunksize == 1 || kseqsplit_opts.chunksize == 1) {
 				fp_chunk = advance_chunk(kseqsplit_opts.filename_template, chunk_number, fp_chunk, chunk_name_buffer);
@@ -323,6 +323,6 @@ int main(int argc, char *argv[])
 		return 0;  // end of file
 	}
 	else {
-		return l;  // parsing error 
+		return l;  // parsing error
 	}
 }

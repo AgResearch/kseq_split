@@ -2,35 +2,35 @@
 * This software is based on Heng Li's kseq parser
 * http://lh3lh3.users.sourceforge.net/kseq.shtml
 * AMcC
-* 
-* kseq parser Contact: Heng Li <lh3@sanger.ac.uk> 
-* 
+*
+* kseq parser Contact: Heng Li <lh3@sanger.ac.uk>
+*
 * The MIT License included with kseq is reproduced below
-*/  
-/* The MIT License 
- 
-   Copyright (c) 2008 Genome Research Ltd (GRL). 
- 
-   Permission is hereby granted, free of charge, to any person obtaining 
-   a copy of this software and associated documentation files (the 
-   "Software"), to deal in the Software without restriction, including 
-   without limitation the rights to use, copy, modify, merge, publish, 
-   distribute, sublicense, and/or sell copies of the Software, and to 
-   permit persons to whom the Software is furnished to do so, subject to 
-   the following conditions: 
- 
-   The above copyright notice and this permission notice shall be 
-   included in all copies or substantial portions of the Software. 
- 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
-   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
-   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-   SOFTWARE. 
-*/  
+*/
+/* The MIT License
+
+   Copyright (c) 2008 Genome Research Ltd (GRL).
+
+   Permission is hereby granted, free of charge, to any person obtaining
+   a copy of this software and associated documentation files (the
+   "Software"), to deal in the Software without restriction, including
+   without limitation the rights to use, copy, modify, merge, publish,
+   distribute, sublicense, and/or sell copies of the Software, and to
+   permit persons to whom the Software is furnished to do so, subject to
+   the following conditions:
+
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+*/
 #include <zlib.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -45,14 +45,14 @@ KSEQ_INIT(gzFile, gzread)
 
 /*
 * This program counts the number of logical records in  a fastq or fasta file , and prints the count to stdout.
-* The input file may be compressed or uncompressed. 
-* It has an optional "approximate mode" (-a) , which estimates the number of records by 
+* The input file may be compressed or uncompressed.
+* It has an optional "approximate mode" (-a) , which estimates the number of records by
 * reading and writing a small preview , of n records, and then estimating N = empirical_adjustment_function( n * original file size / preview filesize)
-* (if the original is compressed then so is the preview). The empirical adjustment is determined by fitting a model to 
+* (if the original is compressed then so is the preview). The empirical adjustment is determined by fitting a model to
 * a test dataset of Y = actual/raw_approximation , in terms of X1=filesize in bytes, X2=compression type.
 *
-* bugs / limitations associated with the -a option : 
-* 
+* bugs / limitations associated with the -a option :
+*
 *    1. accuracy in general on compressed data is somewhat poor as compression size is probably nonlinear w.r.t file size
 *    2. accuracy will be poor if the preview seq lengths are unrepresentative
 *    3. will not recognise .zz compression
@@ -60,9 +60,9 @@ KSEQ_INIT(gzFile, gzread)
 *    5. not extensively tested on formats other than gzip, and uncompressed
 *    6. there are big-endian/little-endian variations on the compression magic bytes that are not yet supported. (One of these,for gzip, is supported)
 *       - if compression is not detected, -a option will be "way out"
-*    7. not tested on variant fastq and fasta 
+*    7. not tested on variant fastq and fasta
 *    8. The empirical adjustment is based on a fairly small test dataset and could be improved with more data and a better model
-* 
+*
 */
 
 #define DEBUG 0
@@ -71,18 +71,18 @@ KSEQ_INIT(gzFile, gzread)
 typedef struct kseqcount_opts {
 	char* input_filename;
 	int approximate;
-        	
+
 } t_kseqcount_opts;
 
 typedef struct kseqcount_tempfile {
 	char* temp_filename;
 	gzFile ztemp_file;
-	FILE *temp_file;        	
+	FILE *temp_file;
 } t_kseqcount_tempfile;
 
 
 int file_exist (char *filename) {
-  	struct stat   stbuff;   
+  	struct stat   stbuff;
   	return (stat (filename, &stbuff) == 0);
 }
 
@@ -92,7 +92,7 @@ int get_kseqcount_opts(int argc, char **argv, t_kseqcount_opts *kseqcount_opts)
 	char* usage="Usage: %s [ -h ] [-a] filename \n";
 	int c;
 
-	kseqcount_opts->approximate = 0; 
+	kseqcount_opts->approximate = 0;
 
 	while ((c = getopt (argc, argv, "ha")) != -1) {
 		switch (c) {
@@ -103,7 +103,7 @@ int get_kseqcount_opts(int argc, char **argv, t_kseqcount_opts *kseqcount_opts)
 				kseqcount_opts-> approximate = 1;
 				break;
 			case '?':
-				fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt); 
+				fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
 				return 1;
 			default:
 				abort ();
@@ -111,20 +111,20 @@ int get_kseqcount_opts(int argc, char **argv, t_kseqcount_opts *kseqcount_opts)
    	} // getopt loop
 
 
-  
-	// assign non-option args 
+
+	// assign non-option args
 	if( argc - optind != 1 ) {
 		fprintf(stderr, usage, argv[0]);
 		return 1;
 	}
-	kseqcount_opts->input_filename = argv[optind]; 
+	kseqcount_opts->input_filename = argv[optind];
 
 	if ( ! file_exist( kseqcount_opts->input_filename )) {
 		fprintf(stderr, "file not found : %s\n", kseqcount_opts->input_filename);
 		return 1;
 	}
-		
-  
+
+
   	return 0;
 }
 
@@ -140,7 +140,7 @@ void kseq_count_zwrite( kseq_t *seq, gzFile fp) {
 		gzprintf(fp, "%s\n", seq->seq.s);
 	}
 	else {
-		// assume fastq		
+		// assume fastq
         	if ( seq->comment.l ) {
 			gzprintf(fp, "@%s %s\n", seq->name.s, seq->comment.s);
                 }
@@ -165,7 +165,7 @@ void kseq_count_write( kseq_t *seq, FILE *fp) {
 		fprintf(fp, "%s\n", seq->seq.s);
 	}
 	else {
-		// assume fastq		
+		// assume fastq
         	if ( seq->comment.l ) {
 			fprintf(fp, "@%s %s\n", seq->name.s, seq->comment.s);
                 }
@@ -206,18 +206,18 @@ void get_tempfile(t_kseqcount_tempfile *tempfile, int compression_type) {
 
 int get_compression_type(char *filename) {
 	// ref https://stackoverflow.com/questions/19120676/how-to-detect-type-of-compression-used-on-the-file-if-no-file-extension-is-spe
-	//const char 
+	//const char
 	//Zip (.zip) format description, starts with 0x50, 0x4b, 0x03, 0x04 (unless empty — then the last two are 0x05, 0x06 or 0x06, 0x06)
 	//Gzip (.gz) format description, starts with 0x1f, 0x8b, 0x08
 	//xz (.xz) format description, starts with 0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00
 
-	//zlib (.zz) format description, starts with two bytes (in bits) 0aaa1000 bbbccccc, where ccccc is chosen so that the 
-        // first byte viewed as a int16 times 256 plus the second byte viewed as a int16 is a multiple of 31. 
+	//zlib (.zz) format description, starts with two bytes (in bits) 0aaa1000 bbbccccc, where ccccc is chosen so that the
+        // first byte viewed as a int16 times 256 plus the second byte viewed as a int16 is a multiple of 31.
 	// e.g: 01111000(bits) = 120(int16), 10011100(bits) = 156(int16), 120 * 256 + 156 = 30876 which is a multiple of 31
 	//compress (.Z) starts with 0x1f, 0x9d
 	//bzip2 (.bz2) starts with 0x42, 0x5a, 0x68
 
-	// note there are big-endian /little-endian variations to the above - e.g. from the wild : 
+	// note there are big-endian /little-endian variations to the above - e.g. from the wild :
         //illustrious$ od -x /dataset/hiseq/scratch/postprocessing/180222_D00390_0347_ACC8WAANXX.processed/bcl2fastq/SQ0634/SQ0634_S8_L008_R1_001.fastq.gz | head
         //0000000 8b1f 0408 0000 0000 ff00 0006 4342 0002
 
@@ -241,16 +241,16 @@ int get_compression_type(char *filename) {
 	int num_fingerprints;
 	const int BUF_SIZE=7;
 	unsigned char fingerprint_buffer[BUF_SIZE];
-	
+
 	FILE *instream;
-	int num_read=0; 
+	int num_read=0;
 	int i;
 
         int compression_type = -1;
 
         num_fingerprints = sizeof(fingerprints)/ sizeof(fingerprints[0]);
 
-  
+
 	instream = fopen(filename,"rb");
 	num_read = fread(fingerprint_buffer, sizeof(fingerprint_buffer[0]), BUF_SIZE, instream);
 	fclose(instream);
@@ -268,13 +268,13 @@ int get_compression_type(char *filename) {
                        	fingerprints[i][0],fingerprints[i][1] );
 		}
 
-           
-	   	if(strncmp( fingerprint_buffer, fingerprints[i], finger_sizes[i]) == 0) { 
+
+	   	if(strncmp( fingerprint_buffer, fingerprints[i], finger_sizes[i]) == 0) {
 	      		compression_type = i;
 	      		break;
 	   	}
         }
-	return(compression_type); 
+	return(compression_type);
 
 }
 
@@ -285,14 +285,14 @@ int estimate_count(int preview_record_count, int compression_type, double file_s
 	double raw_estimate;
 	double x;
 
-	raw_estimate = preview_record_count * file_size / preview_size ; 
+	raw_estimate = preview_record_count * file_size / preview_size ;
 
 	if ( file_size < 100000000 ) {
 		return raw_estimate;
 	}
 
 	if (compression_type < 0 ) {
-		return raw_estimate; 
+		return raw_estimate;
 	}
 	else {
 		x = file_size / 1000000000;
@@ -309,7 +309,7 @@ int estimate_count(int preview_record_count, int compression_type, double file_s
 		else if (empirical_adjustment < 0.8 ) {
 			empirical_adjustment = 0.8;
 		}
-	
+
 		return ( int ) ( 0.5 + empirical_adjustment * raw_estimate ) ;
 	}
 }
@@ -330,23 +330,23 @@ int main(int argc, char *argv[])
 
 	t_kseqcount_opts kseqcount_opts;
 	t_kseqcount_tempfile tempfile;
-        
+
         kseqcount_opts_result = get_kseqcount_opts(argc, argv, &kseqcount_opts);
  	if ( kseqcount_opts_result != 0 ){
 		// usage message on help is not an error
 		return kseqcount_opts_result == 2 ? 0 : kseqcount_opts_result;
- 	} 
+ 	}
 
-	// check compression type of input file. Note that we only need this for the approximate 
-	// option, in order to decide whether to write out a compressed or uncompressed 
+	// check compression type of input file. Note that we only need this for the approximate
+	// option, in order to decide whether to write out a compressed or uncompressed
 	// preview file. (zlib can handle either compressed or uncompressed *input* transparently)
         compression_type = get_compression_type( kseqcount_opts.input_filename) ;
 
-	if(DEBUG) 
+	if(DEBUG)
 		printf("DEBUG : compression type = %d\n",compression_type);
-	
 
-	// process the file 
+
+	// process the file
 	fp = gzopen(kseqcount_opts.input_filename, "r");
 
 	if(kseqcount_opts.approximate == 0) {
@@ -361,25 +361,25 @@ int main(int argc, char *argv[])
 		get_tempfile(&tempfile, compression_type);
 		seq = kseq_init(fp);
 		while((l = kseq_read(seq)) >= 0) {
-			if(compression_type != -1 ) { 
+			if(compression_type != -1 ) {
 				kseq_count_zwrite( seq, tempfile.ztemp_file);
 			}
 			else {
 				kseq_count_write( seq, tempfile.temp_file);
 			}
-			
+
 			record_count++;
 			if(record_count == sample_size) {
 				break;
 			}
 		}
-		//kseq_read(seq); 
+		//kseq_read(seq);
 
 
 		//gzprintf(tempfile.temp_file, "Hello World\n");
-		
+
 		if(compression_type != -1) {
-			gzclose(tempfile.ztemp_file);	
+			gzclose(tempfile.ztemp_file);
 		}
 		else {
 			fclose(tempfile.temp_file);
